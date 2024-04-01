@@ -1,0 +1,472 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 600px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 600px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+             #config {
+                 float: left;
+                 width: 400px;
+                 height: 600px;
+             }
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+            <div id="config"></div>
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "id": "kiganyi_", "label": "kiganyi_", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "adidas", "label": "adidas", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "bajabiri", "label": "bajabiri", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "burgerking", "label": "burgerking", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "xbox", "label": "xbox", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "nike", "label": "nike", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "undefeatedinc", "label": "undefeatedinc", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "uniwatch", "label": "uniwatch", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lakings", "label": "lakings", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lululemon", "label": "lululemon", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "sacramentokings", "label": "sacramentokings", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "atari_jones", "label": "atari_jones", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "adidasoriginals", "label": "adidasoriginals", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "solefed", "label": "solefed", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "jumpman23", "label": "jumpman23", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "nikestore", "label": "nikestore", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "snkr_twitr", "label": "snkr_twitr", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "golfdigest", "label": "golfdigest", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "jonahlupton", "label": "jonahlupton", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "roblox", "label": "roblox", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "jermainedupri", "label": "jermainedupri", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "finishline", "label": "finishline", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "wwd", "label": "wwd", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "hiphopwired", "label": "hiphopwired", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "xboxwire", "label": "xboxwire", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "aarongreenberg", "label": "aarongreenberg", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "stockx", "label": "stockx", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "xboxp3", "label": "xboxp3", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "predsnhl", "label": "predsnhl", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "dashiexp", "label": "dashiexp", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "fastcompany", "label": "fastcompany", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lifeatpurdue", "label": "lifeatpurdue", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "reignofapril", "label": "reignofapril", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "nrarmour", "label": "nrarmour", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "nwsl", "label": "nwsl", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "sbjsbd", "label": "sbjsbd", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "mpinoe", "label": "mpinoe", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "barcaacademy", "label": "barcaacademy", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "khou", "label": "khou", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "oakley", "label": "oakley", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "marshablackburn", "label": "marshablackburn", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "senrickscott", "label": "senrickscott", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "schuh", "label": "schuh", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "dezeen", "label": "dezeen", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lebatardshow", "label": "lebatardshow", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "billiejeanking", "label": "billiejeanking", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "barrysanders", "label": "barrysanders", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "complex", "label": "complex", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "complexstyle", "label": "complexstyle", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "tinashe", "label": "tinashe", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "brooksrunning", "label": "brooksrunning", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "adidasrunning", "label": "adidasrunning", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "wiedenkennedy", "label": "wiedenkennedy", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "bottom2thatop", "label": "bottom2thatop", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "candace_parker", "label": "candace_parker", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "nicekicks", "label": "nicekicks", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "katgraham", "label": "katgraham", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "joshog", "label": "joshog", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "adweek", "label": "adweek", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "kingjames", "label": "kingjames", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "uninterrupted", "label": "uninterrupted", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "jamesgunn", "label": "jamesgunn", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "pomklementieff", "label": "pomklementieff", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "loyalty360", "label": "loyalty360", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "jasonlacanfora", "label": "jasonlacanfora", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "orioles", "label": "orioles", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "kohls", "label": "kohls", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "7newsdc", "label": "7newsdc", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "realrclark25", "label": "realrclark25", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "adidashoops", "label": "adidashoops", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "wnba", "label": "wnba", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "barondavis", "label": "barondavis", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "metropolismag", "label": "metropolismag", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "legiqn", "label": "legiqn", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "fatkiddeals", "label": "fatkiddeals", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "jack_p", "label": "jack_p", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "nyctsubway", "label": "nyctsubway", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "nikebasketball", "label": "nikebasketball", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "giannis_an34", "label": "giannis_an34", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "slamonline", "label": "slamonline", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "rga", "label": "rga", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "gladstein", "label": "gladstein", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "msmelchen", "label": "msmelchen", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "sproutsocial", "label": "sproutsocial", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "natbrunell", "label": "natbrunell", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "fousey", "label": "fousey", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "okayplayer", "label": "okayplayer", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "yahoofinance", "label": "yahoofinance", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "enesfreedom", "label": "enesfreedom", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "redsteeze", "label": "redsteeze", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "sethamandel", "label": "sethamandel", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "slimjim", "label": "slimjim", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "tengbiao", "label": "tengbiao", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "hughhewitt", "label": "hughhewitt", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "muslimmatters", "label": "muslimmatters", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "nedryun", "label": "nedryun", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "ericmmatheny", "label": "ericmmatheny", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "epochtimes", "label": "epochtimes", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "suns", "label": "suns", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "donaldjtrumpjr", "label": "donaldjtrumpjr", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "joshrogin", "label": "joshrogin", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "yesnicksearcy", "label": "yesnicksearcy", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "highsnobiety", "label": "highsnobiety", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lasparks", "label": "lasparks", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "realunogame", "label": "realunogame", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "deezefi", "label": "deezefi", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "tropofarmer", "label": "tropofarmer", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "mrleonardkim", "label": "mrleonardkim", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "evankirstel", "label": "evankirstel", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "mattel", "label": "mattel", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "reebok", "label": "reebok", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "pennstatefball", "label": "pennstatefball", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "stevedeaceshow", "label": "stevedeaceshow", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "girlsintech", "label": "girlsintech", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "uoregon", "label": "uoregon", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "mystic7", "label": "mystic7", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "ericpmusselman", "label": "ericpmusselman", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "qrich", "label": "qrich", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "cointelegraph", "label": "cointelegraph", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "houstondynamo", "label": "houstondynamo", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "threadreaderapp", "label": "threadreaderapp", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "prestonpysh", "label": "prestonpysh", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "rwang0", "label": "rwang0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "tandfn", "label": "tandfn", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "thebussypleaser", "label": "thebussypleaser", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "techinsider", "label": "techinsider", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "jdofficial", "label": "jdofficial", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "xlr8r", "label": "xlr8r", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "onsoranje", "label": "onsoranje", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "liekemartens1", "label": "liekemartens1", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "knvb", "label": "knvb", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "realshellyannfp", "label": "realshellyannfp", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "kicksdeals", "label": "kicksdeals", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lafc", "label": "lafc", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "thegrovela", "label": "thegrovela", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lagalaxy", "label": "lagalaxy", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "adamsconsulting", "label": "adamsconsulting", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "coindesk", "label": "coindesk", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "adidasfootball", "label": "adidasfootball", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "spicer", "label": "spicer", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "kieraplease", "label": "kieraplease", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "jkylebass", "label": "jkylebass", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "kfile", "label": "kfile", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "sportsiren", "label": "sportsiren", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "scottwarner18", "label": "scottwarner18", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "rosgo21", "label": "rosgo21", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "bloxy_news", "label": "bloxy_news", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "insideroblox", "label": "insideroblox", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "atmos_usa", "label": "atmos_usa", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "adamjacksonsf", "label": "adamjacksonsf", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "novambb", "label": "novambb", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "solomonyue", "label": "solomonyue", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "angelaruggiero", "label": "angelaruggiero", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "bauerhockey", "label": "bauerhockey", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "jenniferwalcott", "label": "jenniferwalcott", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "road_2_ft_worth", "label": "road_2_ft_worth", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "vampybitme", "label": "vampybitme", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "iamwellandgood", "label": "iamwellandgood", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "boredelonmusk", "label": "boredelonmusk", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "mattsteffanina", "label": "mattsteffanina", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "mediapost", "label": "mediapost", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "brooklynnets", "label": "brooklynnets", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "vidcon", "label": "vidcon", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "hunterheather", "label": "hunterheather", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "misstabstevens", "label": "misstabstevens", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "chainlinkgod", "label": "chainlinkgod", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "1djfirstclass", "label": "1djfirstclass", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "chsommers", "label": "chsommers", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "tonipayne", "label": "tonipayne", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "cowhercbs", "label": "cowhercbs", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "detroitpistons", "label": "detroitpistons", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "cory_shoff", "label": "cory_shoff", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "usa_lacrosse", "label": "usa_lacrosse", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "xxxcrypt0", "label": "xxxcrypt0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "ijustine", "label": "ijustine", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "hackapreneur", "label": "hackapreneur", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "namecheap", "label": "namecheap", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "campaignbrands", "label": "campaignbrands", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "elmaaelmoo", "label": "elmaaelmoo", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "colethereum", "label": "colethereum", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "nebraskancrypto", "label": "nebraskancrypto", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "vaynermedia", "label": "vaynermedia", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "schmittnyc", "label": "schmittnyc", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "seanmdav", "label": "seanmdav", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "hunterw", "label": "hunterw", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "realvision", "label": "realvision", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "reallisariley", "label": "reallisariley", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "rexchapman", "label": "rexchapman", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "qiasomar", "label": "qiasomar", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "kingofthecrane", "label": "kingofthecrane", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "cnbc", "label": "cnbc", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "ericvdunn", "label": "ericvdunn", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "trustlessstate", "label": "trustlessstate", "shape": "dot", "size": 10}, {"color": "#97c2fc", "id": "lopp", "label": "lopp", "shape": "dot", "size": 10}]);
+                  edges = new vis.DataSet([{"arrows": "to", "from": "kiganyi_", "to": "adidas", "width": 2}, {"arrows": "to", "from": "kiganyi_", "to": "bajabiri", "width": 1}, {"arrows": "to", "from": "adidas", "to": "burgerking", "width": 2}, {"arrows": "to", "from": "adidas", "to": "xbox", "width": 2}, {"arrows": "to", "from": "adidas", "to": "nike", "width": 2}, {"arrows": "to", "from": "undefeatedinc", "to": "adidas", "width": 13}, {"arrows": "to", "from": "undefeatedinc", "to": "nike", "width": 29}, {"arrows": "to", "from": "uniwatch", "to": "nike", "width": 11}, {"arrows": "to", "from": "uniwatch", "to": "lakings", "width": 1}, {"arrows": "to", "from": "uniwatch", "to": "adidas", "width": 3}, {"arrows": "to", "from": "uniwatch", "to": "lululemon", "width": 1}, {"arrows": "to", "from": "uniwatch", "to": "sacramentokings", "width": 1}, {"arrows": "to", "from": "atari_jones", "to": "adidasoriginals", "width": 2}, {"arrows": "to", "from": "atari_jones", "to": "adidas", "width": 5}, {"arrows": "to", "from": "adidasoriginals", "to": "adidas", "width": 2}, {"arrows": "to", "from": "solefed", "to": "jumpman23", "width": 31}, {"arrows": "to", "from": "solefed", "to": "nike", "width": 39}, {"arrows": "to", "from": "solefed", "to": "nikestore", "width": 13}, {"arrows": "to", "from": "solefed", "to": "snkr_twitr", "width": 1}, {"arrows": "to", "from": "jumpman23", "to": "nike", "width": 1}, {"arrows": "to", "from": "bajabiri", "to": "adidas", "width": 9}, {"arrows": "to", "from": "bajabiri", "to": "nike", "width": 1}, {"arrows": "to", "from": "golfdigest", "to": "lululemon", "width": 4}, {"arrows": "to", "from": "jonahlupton", "to": "lululemon", "width": 3}, {"arrows": "to", "from": "nikestore", "to": "nike", "width": 7}, {"arrows": "to", "from": "nikestore", "to": "roblox", "width": 1}, {"arrows": "to", "from": "nikestore", "to": "jumpman23", "width": 1}, {"arrows": "to", "from": "jermainedupri", "to": "adidas", "width": 6}, {"arrows": "to", "from": "finishline", "to": "nike", "width": 16}, {"arrows": "to", "from": "finishline", "to": "adidas", "width": 3}, {"arrows": "to", "from": "wwd", "to": "nike", "width": 6}, {"arrows": "to", "from": "wwd", "to": "adidas", "width": 1}, {"arrows": "to", "from": "wwd", "to": "lululemon", "width": 1}, {"arrows": "to", "from": "hiphopwired", "to": "nike", "width": 8}, {"arrows": "to", "from": "hiphopwired", "to": "xbox", "width": 2}, {"arrows": "to", "from": "hiphopwired", "to": "adidas", "width": 6}, {"arrows": "to", "from": "hiphopwired", "to": "jumpman23", "width": 3}, {"arrows": "to", "from": "xboxwire", "to": "adidas", "width": 2}, {"arrows": "to", "from": "aarongreenberg", "to": "adidas", "width": 4}, {"arrows": "to", "from": "aarongreenberg", "to": "xbox", "width": 4}, {"arrows": "to", "from": "aarongreenberg", "to": "stockx", "width": 1}, {"arrows": "to", "from": "xbox", "to": "adidas", "width": 6}, {"arrows": "to", "from": "xbox", "to": "adidasoriginals", "width": 1}, {"arrows": "to", "from": "xbox", "to": "stockx", "width": 1}, {"arrows": "to", "from": "xboxp3", "to": "aarongreenberg", "width": 1}, {"arrows": "to", "from": "xboxp3", "to": "adidas", "width": 2}, {"arrows": "to", "from": "xboxp3", "to": "xbox", "width": 1}, {"arrows": "to", "from": "predsnhl", "to": "lululemon", "width": 1}, {"arrows": "to", "from": "predsnhl", "to": "adidas", "width": 1}, {"arrows": "to", "from": "lakings", "to": "adidas", "width": 2}, {"arrows": "to", "from": "dashiexp", "to": "xbox", "width": 2}, {"arrows": "to", "from": "dashiexp", "to": "adidas", "width": 2}, {"arrows": "to", "from": "fastcompany", "to": "nike", "width": 4}, {"arrows": "to", "from": "fastcompany", "to": "lifeatpurdue", "width": 1}, {"arrows": "to", "from": "reignofapril", "to": "nike", "width": 5}, {"arrows": "to", "from": "nrarmour", "to": "nike", "width": 2}, {"arrows": "to", "from": "nrarmour", "to": "nwsl", "width": 1}, {"arrows": "to", "from": "sbjsbd", "to": "nike", "width": 6}, {"arrows": "to", "from": "sbjsbd", "to": "adidas", "width": 3}, {"arrows": "to", "from": "sbjsbd", "to": "nwsl", "width": 1}, {"arrows": "to", "from": "sbjsbd", "to": "predsnhl", "width": 1}, {"arrows": "to", "from": "sbjsbd", "to": "mpinoe", "width": 1}, {"arrows": "to", "from": "sbjsbd", "to": "wwd", "width": 1}, {"arrows": "to", "from": "sbjsbd", "to": "adidasoriginals", "width": 1}, {"arrows": "to", "from": "barcaacademy", "to": "nike", "width": 2}, {"arrows": "to", "from": "khou", "to": "lululemon", "width": 1}, {"arrows": "to", "from": "khou", "to": "nike", "width": 1}, {"arrows": "to", "from": "oakley", "to": "lululemon", "width": 2}, {"arrows": "to", "from": "marshablackburn", "to": "nike", "width": 3}, {"arrows": "to", "from": "senrickscott", "to": "nike", "width": 2}, {"arrows": "to", "from": "schuh", "to": "nike", "width": 3}, {"arrows": "to", "from": "schuh", "to": "adidas", "width": 1}, {"arrows": "to", "from": "dezeen", "to": "nike", "width": 5}, {"arrows": "to", "from": "dezeen", "to": "adidas", "width": 1}, {"arrows": "to", "from": "lebatardshow", "to": "nike", "width": 1}, {"arrows": "to", "from": "billiejeanking", "to": "adidas", "width": 2}, {"arrows": "to", "from": "barrysanders", "to": "nike", "width": 2}, {"arrows": "to", "from": "complex", "to": "adidas", "width": 5}, {"arrows": "to", "from": "complex", "to": "complexstyle", "width": 3}, {"arrows": "to", "from": "complex", "to": "tinashe", "width": 1}, {"arrows": "to", "from": "brooksrunning", "to": "nike", "width": 2}, {"arrows": "to", "from": "brooksrunning", "to": "adidasrunning", "width": 1}, {"arrows": "to", "from": "brooksrunning", "to": "lululemon", "width": 2}, {"arrows": "to", "from": "adidasrunning", "to": "adidas", "width": 3}, {"arrows": "to", "from": "wiedenkennedy", "to": "nike", "width": 10}, {"arrows": "to", "from": "bottom2thatop", "to": "adidas", "width": 2}, {"arrows": "to", "from": "bottom2thatop", "to": "candace_parker", "width": 1}, {"arrows": "to", "from": "candace_parker", "to": "adidas", "width": 1}, {"arrows": "to", "from": "snkr_twitr", "to": "nike", "width": 13}, {"arrows": "to", "from": "snkr_twitr", "to": "adidas", "width": 4}, {"arrows": "to", "from": "snkr_twitr", "to": "solefed", "width": 2}, {"arrows": "to", "from": "snkr_twitr", "to": "adidasoriginals", "width": 1}, {"arrows": "to", "from": "snkr_twitr", "to": "nikestore", "width": 1}, {"arrows": "to", "from": "snkr_twitr", "to": "nicekicks", "width": 1}, {"arrows": "to", "from": "snkr_twitr", "to": "jumpman23", "width": 2}, {"arrows": "to", "from": "katgraham", "to": "adidas", "width": 17}, {"arrows": "to", "from": "joshog", "to": "lululemon", "width": 2}, {"arrows": "to", "from": "adweek", "to": "lululemon", "width": 2}, {"arrows": "to", "from": "adweek", "to": "adidas", "width": 3}, {"arrows": "to", "from": "kingjames", "to": "nike", "width": 2}, {"arrows": "to", "from": "kingjames", "to": "uninterrupted", "width": 1}, {"arrows": "to", "from": "jamesgunn", "to": "adidasoriginals", "width": 7}, {"arrows": "to", "from": "jamesgunn", "to": "adidas", "width": 7}, {"arrows": "to", "from": "jamesgunn", "to": "pomklementieff", "width": 3}, {"arrows": "to", "from": "pomklementieff", "to": "jamesgunn", "width": 3}, {"arrows": "to", "from": "pomklementieff", "to": "adidasoriginals", "width": 3}, {"arrows": "to", "from": "pomklementieff", "to": "adidas", "width": 3}, {"arrows": "to", "from": "loyalty360", "to": "adidas", "width": 2}, {"arrows": "to", "from": "jasonlacanfora", "to": "nike", "width": 2}, {"arrows": "to", "from": "jasonlacanfora", "to": "orioles", "width": 2}, {"arrows": "to", "from": "kohls", "to": "adidas", "width": 2}, {"arrows": "to", "from": "7newsdc", "to": "nike", "width": 2}, {"arrows": "to", "from": "realrclark25", "to": "lululemon", "width": 5}, {"arrows": "to", "from": "realrclark25", "to": "nike", "width": 1}, {"arrows": "to", "from": "realrclark25", "to": "jumpman23", "width": 2}, {"arrows": "to", "from": "adidashoops", "to": "candace_parker", "width": 1}, {"arrows": "to", "from": "adidashoops", "to": "wnba", "width": 1}, {"arrows": "to", "from": "adidashoops", "to": "adidas", "width": 4}, {"arrows": "to", "from": "wnba", "to": "nike", "width": 2}, {"arrows": "to", "from": "wnba", "to": "candace_parker", "width": 2}, {"arrows": "to", "from": "wnba", "to": "adidashoops", "width": 1}, {"arrows": "to", "from": "wnba", "to": "adidas", "width": 1}, {"arrows": "to", "from": "barondavis", "to": "nike", "width": 2}, {"arrows": "to", "from": "metropolismag", "to": "adidas", "width": 2}, {"arrows": "to", "from": "legiqn", "to": "xbox", "width": 21}, {"arrows": "to", "from": "legiqn", "to": "adidas", "width": 21}, {"arrows": "to", "from": "legiqn", "to": "fatkiddeals", "width": 2}, {"arrows": "to", "from": "fatkiddeals", "to": "legiqn", "width": 2}, {"arrows": "to", "from": "fatkiddeals", "to": "xbox", "width": 2}, {"arrows": "to", "from": "fatkiddeals", "to": "adidas", "width": 2}, {"arrows": "to", "from": "jack_p", "to": "xbox", "width": 2}, {"arrows": "to", "from": "jack_p", "to": "adidas", "width": 2}, {"arrows": "to", "from": "nyctsubway", "to": "adidas", "width": 3}, {"arrows": "to", "from": "nikebasketball", "to": "nike", "width": 4}, {"arrows": "to", "from": "nikebasketball", "to": "giannis_an34", "width": 1}, {"arrows": "to", "from": "nikebasketball", "to": "wnba", "width": 1}, {"arrows": "to", "from": "nikebasketball", "to": "nikestore", "width": 1}, {"arrows": "to", "from": "slamonline", "to": "nike", "width": 3}, {"arrows": "to", "from": "slamonline", "to": "nikebasketball", "width": 3}, {"arrows": "to", "from": "slamonline", "to": "adidas", "width": 1}, {"arrows": "to", "from": "slamonline", "to": "adidashoops", "width": 1}, {"arrows": "to", "from": "rga", "to": "nike", "width": 2}, {"arrows": "to", "from": "stockx", "to": "adidas", "width": 3}, {"arrows": "to", "from": "stockx", "to": "xbox", "width": 2}, {"arrows": "to", "from": "gladstein", "to": "msmelchen", "width": 1}, {"arrows": "to", "from": "gladstein", "to": "nike", "width": 2}, {"arrows": "to", "from": "msmelchen", "to": "nike", "width": 2}, {"arrows": "to", "from": "sproutsocial", "to": "nike", "width": 2}, {"arrows": "to", "from": "orioles", "to": "nike", "width": 6}, {"arrows": "to", "from": "natbrunell", "to": "nike", "width": 2}, {"arrows": "to", "from": "fousey", "to": "nike", "width": 3}, {"arrows": "to", "from": "okayplayer", "to": "nike", "width": 1}, {"arrows": "to", "from": "sacramentokings", "to": "nike", "width": 3}, {"arrows": "to", "from": "yahoofinance", "to": "lululemon", "width": 3}, {"arrows": "to", "from": "enesfreedom", "to": "nike", "width": 3}, {"arrows": "to", "from": "enesfreedom", "to": "kingjames", "width": 1}, {"arrows": "to", "from": "enesfreedom", "to": "jumpman23", "width": 1}, {"arrows": "to", "from": "redsteeze", "to": "nike", "width": 2}, {"arrows": "to", "from": "sethamandel", "to": "nike", "width": 2}, {"arrows": "to", "from": "slimjim", "to": "adweek", "width": 1}, {"arrows": "to", "from": "slimjim", "to": "nike", "width": 2}, {"arrows": "to", "from": "slimjim", "to": "burgerking", "width": 1}, {"arrows": "to", "from": "slimjim", "to": "adidasoriginals", "width": 1}, {"arrows": "to", "from": "tengbiao", "to": "nike", "width": 2}, {"arrows": "to", "from": "hughhewitt", "to": "nike", "width": 1}, {"arrows": "to", "from": "muslimmatters", "to": "nike", "width": 2}, {"arrows": "to", "from": "muslimmatters", "to": "enesfreedom", "width": 1}, {"arrows": "to", "from": "nedryun", "to": "nike", "width": 2}, {"arrows": "to", "from": "ericmmatheny", "to": "nike", "width": 2}, {"arrows": "to", "from": "lifeatpurdue", "to": "nike", "width": 3}, {"arrows": "to", "from": "lifeatpurdue", "to": "fastcompany", "width": 2}, {"arrows": "to", "from": "epochtimes", "to": "nike", "width": 2}, {"arrows": "to", "from": "suns", "to": "nike", "width": 2}, {"arrows": "to", "from": "suns", "to": "wnba", "width": 1}, {"arrows": "to", "from": "donaldjtrumpjr", "to": "nike", "width": 3}, {"arrows": "to", "from": "joshrogin", "to": "nike", "width": 2}, {"arrows": "to", "from": "yesnicksearcy", "to": "kingjames", "width": 1}, {"arrows": "to", "from": "yesnicksearcy", "to": "nike", "width": 1}, {"arrows": "to", "from": "highsnobiety", "to": "nike", "width": 1}, {"arrows": "to", "from": "highsnobiety", "to": "adidas", "width": 1}, {"arrows": "to", "from": "lasparks", "to": "nike", "width": 4}, {"arrows": "to", "from": "realunogame", "to": "nike", "width": 15}, {"arrows": "to", "from": "realunogame", "to": "giannis_an34", "width": 16}, {"arrows": "to", "from": "giannis_an34", "to": "realunogame", "width": 1}, {"arrows": "to", "from": "giannis_an34", "to": "nike", "width": 2}, {"arrows": "to", "from": "giannis_an34", "to": "nikebasketball", "width": 1}, {"arrows": "to", "from": "deezefi", "to": "lululemon", "width": 14}, {"arrows": "to", "from": "deezefi", "to": "nike", "width": 2}, {"arrows": "to", "from": "deezefi", "to": "tropofarmer", "width": 1}, {"arrows": "to", "from": "deezefi", "to": "adidas", "width": 1}, {"arrows": "to", "from": "mrleonardkim", "to": "nike", "width": 3}, {"arrows": "to", "from": "mrleonardkim", "to": "lululemon", "width": 14}, {"arrows": "to", "from": "mrleonardkim", "to": "fastcompany", "width": 2}, {"arrows": "to", "from": "evankirstel", "to": "nike", "width": 1}, {"arrows": "to", "from": "evankirstel", "to": "xbox", "width": 1}, {"arrows": "to", "from": "evankirstel", "to": "lululemon", "width": 3}, {"arrows": "to", "from": "mattel", "to": "realunogame", "width": 6}, {"arrows": "to", "from": "mattel", "to": "nike", "width": 6}, {"arrows": "to", "from": "mattel", "to": "giannis_an34", "width": 6}, {"arrows": "to", "from": "reebok", "to": "nike", "width": 2}, {"arrows": "to", "from": "reebok", "to": "jumpman23", "width": 1}, {"arrows": "to", "from": "reebok", "to": "adidas", "width": 1}, {"arrows": "to", "from": "pennstatefball", "to": "nike", "width": 2}, {"arrows": "to", "from": "stevedeaceshow", "to": "nike", "width": 1}, {"arrows": "to", "from": "girlsintech", "to": "nike", "width": 2}, {"arrows": "to", "from": "uoregon", "to": "nike", "width": 2}, {"arrows": "to", "from": "mystic7", "to": "deezefi", "width": 1}, {"arrows": "to", "from": "mystic7", "to": "lululemon", "width": 1}, {"arrows": "to", "from": "ericpmusselman", "to": "nike", "width": 3}, {"arrows": "to", "from": "ericpmusselman", "to": "nicekicks", "width": 1}, {"arrows": "to", "from": "qrich", "to": "nike", "width": 4}, {"arrows": "to", "from": "cointelegraph", "to": "nike", "width": 6}, {"arrows": "to", "from": "cointelegraph", "to": "adidas", "width": 1}, {"arrows": "to", "from": "houstondynamo", "to": "adidas", "width": 4}, {"arrows": "to", "from": "threadreaderapp", "to": "nike", "width": 3}, {"arrows": "to", "from": "prestonpysh", "to": "nike", "width": 1}, {"arrows": "to", "from": "rwang0", "to": "nike", "width": 2}, {"arrows": "to", "from": "tandfn", "to": "nike", "width": 3}, {"arrows": "to", "from": "thebussypleaser", "to": "nike", "width": 1}, {"arrows": "to", "from": "thebussypleaser", "to": "adidas", "width": 1}, {"arrows": "to", "from": "techinsider", "to": "nike", "width": 1}, {"arrows": "to", "from": "techinsider", "to": "adidas", "width": 1}, {"arrows": "to", "from": "jdofficial", "to": "nike", "width": 20}, {"arrows": "to", "from": "jdofficial", "to": "adidas", "width": 4}, {"arrows": "to", "from": "jdofficial", "to": "adidasoriginals", "width": 1}, {"arrows": "to", "from": "xlr8r", "to": "nike", "width": 2}, {"arrows": "to", "from": "onsoranje", "to": "liekemartens1", "width": 1}, {"arrows": "to", "from": "onsoranje", "to": "nike", "width": 5}, {"arrows": "to", "from": "onsoranje", "to": "knvb", "width": 1}, {"arrows": "to", "from": "liekemartens1", "to": "knvb", "width": 2}, {"arrows": "to", "from": "liekemartens1", "to": "nike", "width": 2}, {"arrows": "to", "from": "knvb", "to": "liekemartens1", "width": 1}, {"arrows": "to", "from": "knvb", "to": "nike", "width": 2}, {"arrows": "to", "from": "realshellyannfp", "to": "nike", "width": 3}, {"arrows": "to", "from": "kicksdeals", "to": "adidas", "width": 19}, {"arrows": "to", "from": "kicksdeals", "to": "nike", "width": 9}, {"arrows": "to", "from": "lafc", "to": "adidas", "width": 7}, {"arrows": "to", "from": "thegrovela", "to": "nike", "width": 2}, {"arrows": "to", "from": "thegrovela", "to": "lululemon", "width": 1}, {"arrows": "to", "from": "lagalaxy", "to": "adidas", "width": 12}, {"arrows": "to", "from": "adamsconsulting", "to": "nike", "width": 4}, {"arrows": "to", "from": "coindesk", "to": "nike", "width": 3}, {"arrows": "to", "from": "coindesk", "to": "adidas", "width": 1}, {"arrows": "to", "from": "adidasfootball", "to": "lafc", "width": 1}, {"arrows": "to", "from": "adidasfootball", "to": "lagalaxy", "width": 1}, {"arrows": "to", "from": "adidasfootball", "to": "adidas", "width": 3}, {"arrows": "to", "from": "spicer", "to": "adidas", "width": 3}, {"arrows": "to", "from": "kieraplease", "to": "nike", "width": 2}, {"arrows": "to", "from": "jkylebass", "to": "nike", "width": 6}, {"arrows": "to", "from": "jkylebass", "to": "kingjames", "width": 4}, {"arrows": "to", "from": "kfile", "to": "adidas", "width": 2}, {"arrows": "to", "from": "sportsiren", "to": "adidas", "width": 2}, {"arrows": "to", "from": "sportsiren", "to": "candace_parker", "width": 1}, {"arrows": "to", "from": "nicekicks", "to": "adidas", "width": 1}, {"arrows": "to", "from": "nicekicks", "to": "nike", "width": 2}, {"arrows": "to", "from": "scottwarner18", "to": "nike", "width": 4}, {"arrows": "to", "from": "complexstyle", "to": "tinashe", "width": 1}, {"arrows": "to", "from": "complexstyle", "to": "nike", "width": 2}, {"arrows": "to", "from": "complexstyle", "to": "adidas", "width": 3}, {"arrows": "to", "from": "tinashe", "to": "nike", "width": 2}, {"arrows": "to", "from": "rosgo21", "to": "nike", "width": 2}, {"arrows": "to", "from": "roblox", "to": "nike", "width": 2}, {"arrows": "to", "from": "bloxy_news", "to": "nike", "width": 2}, {"arrows": "to", "from": "bloxy_news", "to": "roblox", "width": 2}, {"arrows": "to", "from": "insideroblox", "to": "nike", "width": 2}, {"arrows": "to", "from": "insideroblox", "to": "roblox", "width": 2}, {"arrows": "to", "from": "atmos_usa", "to": "nikestore", "width": 1}, {"arrows": "to", "from": "nwsl", "to": "nike", "width": 2}, {"arrows": "to", "from": "adamjacksonsf", "to": "nike", "width": 1}, {"arrows": "to", "from": "novambb", "to": "nike", "width": 2}, {"arrows": "to", "from": "solomonyue", "to": "nike", "width": 1}, {"arrows": "to", "from": "angelaruggiero", "to": "nwsl", "width": 2}, {"arrows": "to", "from": "angelaruggiero", "to": "nike", "width": 2}, {"arrows": "to", "from": "bauerhockey", "to": "lululemon", "width": 2}, {"arrows": "to", "from": "jenniferwalcott", "to": "adidas", "width": 2}, {"arrows": "to", "from": "road_2_ft_worth", "to": "lululemon", "width": 2}, {"arrows": "to", "from": "vampybitme", "to": "xbox", "width": 3}, {"arrows": "to", "from": "vampybitme", "to": "adidas", "width": 3}, {"arrows": "to", "from": "iamwellandgood", "to": "lululemon", "width": 1}, {"arrows": "to", "from": "iamwellandgood", "to": "adidas", "width": 1}, {"arrows": "to", "from": "tropofarmer", "to": "adidas", "width": 6}, {"arrows": "to", "from": "tropofarmer", "to": "nike", "width": 11}, {"arrows": "to", "from": "tropofarmer", "to": "deezefi", "width": 1}, {"arrows": "to", "from": "boredelonmusk", "to": "nike", "width": 1}, {"arrows": "to", "from": "boredelonmusk", "to": "adidas", "width": 1}, {"arrows": "to", "from": "mattsteffanina", "to": "adidas", "width": 2}, {"arrows": "to", "from": "mattsteffanina", "to": "nike", "width": 1}, {"arrows": "to", "from": "mediapost", "to": "lululemon", "width": 3}, {"arrows": "to", "from": "mediapost", "to": "nike", "width": 2}, {"arrows": "to", "from": "brooklynnets", "to": "adidas", "width": 4}, {"arrows": "to", "from": "vidcon", "to": "nike", "width": 2}, {"arrows": "to", "from": "uninterrupted", "to": "nike", "width": 2}, {"arrows": "to", "from": "hunterheather", "to": "adidas", "width": 2}, {"arrows": "to", "from": "hunterheather", "to": "misstabstevens", "width": 1}, {"arrows": "to", "from": "misstabstevens", "to": "hunterheather", "width": 2}, {"arrows": "to", "from": "misstabstevens", "to": "adidas", "width": 2}, {"arrows": "to", "from": "chainlinkgod", "to": "adidas", "width": 1}, {"arrows": "to", "from": "1djfirstclass", "to": "nike", "width": 4}, {"arrows": "to", "from": "chsommers", "to": "nike", "width": 2}, {"arrows": "to", "from": "tonipayne", "to": "nike", "width": 4}, {"arrows": "to", "from": "tonipayne", "to": "adidas", "width": 3}, {"arrows": "to", "from": "cowhercbs", "to": "nike", "width": 2}, {"arrows": "to", "from": "detroitpistons", "to": "nike", "width": 2}, {"arrows": "to", "from": "cory_shoff", "to": "nike", "width": 2}, {"arrows": "to", "from": "usa_lacrosse", "to": "nike", "width": 2}, {"arrows": "to", "from": "xxxcrypt0", "to": "adidas", "width": 1}, {"arrows": "to", "from": "xxxcrypt0", "to": "nike", "width": 1}, {"arrows": "to", "from": "ijustine", "to": "lululemon", "width": 1}, {"arrows": "to", "from": "ijustine", "to": "nike", "width": 1}, {"arrows": "to", "from": "hackapreneur", "to": "nike", "width": 4}, {"arrows": "to", "from": "burgerking", "to": "xbox", "width": 3}, {"arrows": "to", "from": "burgerking", "to": "nike", "width": 4}, {"arrows": "to", "from": "burgerking", "to": "adidas", "width": 3}, {"arrows": "to", "from": "burgerking", "to": "adidasoriginals", "width": 1}, {"arrows": "to", "from": "burgerking", "to": "slimjim", "width": 1}, {"arrows": "to", "from": "namecheap", "to": "nike", "width": 2}, {"arrows": "to", "from": "namecheap", "to": "adidas", "width": 1}, {"arrows": "to", "from": "campaignbrands", "to": "nike", "width": 5}, {"arrows": "to", "from": "elmaaelmoo", "to": "nike", "width": 1}, {"arrows": "to", "from": "colethereum", "to": "nike", "width": 2}, {"arrows": "to", "from": "nebraskancrypto", "to": "nike", "width": 2}, {"arrows": "to", "from": "vaynermedia", "to": "nike", "width": 5}, {"arrows": "to", "from": "schmittnyc", "to": "nike", "width": 3}, {"arrows": "to", "from": "mpinoe", "to": "nike", "width": 4}, {"arrows": "to", "from": "seanmdav", "to": "nike", "width": 2}, {"arrows": "to", "from": "hunterw", "to": "adidas", "width": 2}, {"arrows": "to", "from": "realvision", "to": "nike", "width": 1}, {"arrows": "to", "from": "reallisariley", "to": "lululemon", "width": 2}, {"arrows": "to", "from": "rexchapman", "to": "nike", "width": 1}, {"arrows": "to", "from": "qiasomar", "to": "nike", "width": 1}, {"arrows": "to", "from": "kingofthecrane", "to": "nike", "width": 2}, {"arrows": "to", "from": "cnbc", "to": "lululemon", "width": 1}, {"arrows": "to", "from": "ericvdunn", "to": "adidas", "width": 2}, {"arrows": "to", "from": "trustlessstate", "to": "lopp", "width": 4}, {"arrows": "to", "from": "trustlessstate", "to": "nike", "width": 4}, {"arrows": "to", "from": "trustlessstate", "to": "adidasoriginals", "width": 4}, {"arrows": "to", "from": "lopp", "to": "trustlessstate", "width": 2}, {"arrows": "to", "from": "lopp", "to": "nike", "width": 2}, {"arrows": "to", "from": "lopp", "to": "adidasoriginals", "width": 2}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": true,
+        "filter": [
+            "physics"
+        ]
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "layout": {
+        "hierarchical": {
+            "blockShifting": true,
+            "edgeMinimization": true,
+            "enabled": true,
+            "levelSeparation": 150,
+            "parentCentralization": true,
+            "sortMethod": "hubsize",
+            "treeSpacing": 200
+        },
+        "improvedLayout": true,
+        "randomSeed": 0
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
